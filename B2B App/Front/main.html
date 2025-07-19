@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Excel'den Veri Yapıştır</title>
+</head>
+<body>
+    <h3>Excel'den Kopyalayıp Buraya Yapıştır</h3>
+    <textarea id="excelVeri" placeholder="Excel'den kopyalayıp buraya yapıştırın" rows="5" cols="50"></textarea>
+    <button onclick="sorgula()">Sorgula</button>
+
+    <h3>Sonuçlar</h3>
+    <pre id="sonuc"></pre>
+
+    <script>
+        function sorgula() {
+            let text = document.getElementById("excelVeri").value.trim();
+            if (!text) {
+                alert("Lütfen önce Excel'den verileri yapıştırın!");
+                return;
+            }
+
+            let satirlar = text.split("\n");
+            let istekler = [];
+
+            satirlar.forEach(satir => {
+                let hucreler = satir.split("\t"); // Excel verisi TAB ile ayrılır
+                if (hucreler.length < 2) return; // En az 2 sütun olmalı
+
+                let parca = hucreler[0].trim();
+                let marka = hucreler[1].trim();
+
+                if (parca && marka) {
+                    let url = `http://localhost:3000/get-price?partNumber=${parca}&brand=${marka}`;
+                    istekler.push(fetch(url).then(res => res.json().then(data => ({ parca, marka, data }))));
+                }
+            });
+
+            // Tüm istekleri sırayla çalıştır ve sonucu ekrana yaz
+            Promise.all(istekler)
+                .then(sonuclar => {
+                    let sonucText = sonuclar.map(({ parca, marka, data }) => 
+                        `Parça: ${parca}, Marka: ${marka}, Fiyat: ${data[0]?.Price || "Bulunamadı"}`
+                    ).join("\n");
+                    document.getElementById("sonuc").textContent = sonucText;
+                })
+                .catch(err => {
+                    document.getElementById("sonuc").textContent = "Hata: " + err.message;
+                });
+        }
+    </script>
+</body>
+</html>
